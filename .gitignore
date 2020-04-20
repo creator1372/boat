@@ -100,7 +100,7 @@ __pypackages__/
 # Celery stuff
 celerybeat-schedule
 celerybeat.pid
-
+device*.toml
 # SageMath parsed files
 *.sage.py
 .vscode

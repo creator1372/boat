@@ -115,4 +115,4 @@ class HttpClient:
             raise
         return True
 
-    #async def get_cosmetic_by_display_name()  # In progress
+    #async def get_cosmetic_by_display_name()  # In progress # noqa

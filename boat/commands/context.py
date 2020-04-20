@@ -1,6 +1,7 @@
 import fortnitepy
-from typing import NewType, Union
+from typing import Union
 from enum import Enum
+
 
 class MessageType(Enum):
     PARTY = 0
@@ -9,7 +10,7 @@ class MessageType(Enum):
 
 class MessageContext(fortnitepy.message.MessageBase):
     def __init__(self,
-                 message: Union[fortnitepy.PartyMessage, fortnitepy.FriendMessage]
+                 message: Union[fortnitepy.PartyMessage, fortnitepy.FriendMessage] # noqa
                  ):
         super().__init__(message.client, message.author, message.content)
         if isinstance(message, fortnitepy.FriendMessage):

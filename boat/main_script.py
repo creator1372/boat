@@ -3,7 +3,7 @@
 import asyncio
 import datetime
 import logging
-from typing import Any, Callable, Dict, Union, MutableMapping, Mapping
+from typing import Any, Callable, Dict, MutableMapping, Mapping
 
 import colorama
 import fortnitepy
@@ -40,6 +40,9 @@ def colored_print(text: str,
 
 
 class MainClient:
+    # TODO
+    # Add decorator for owner only commands
+    # Make this implemented for fortnitepy and not for
     def __init__(self, command_prefix):
         self.commands: Dict[str, Callable] = {}
         self._command_prefix = command_prefix
@@ -63,11 +66,13 @@ class MainClient:
             log.addHandler(h)
         self._account_settings: Dict[Any, Any] = self._settings["account"]
         self.owner_mode = self._account_settings["owner_mode"]
-        self.owners = set(self._account_settings["owners"] if self.owner_mode == True else [])
-
+        self.owners = set(
+            self._account_settings["owners"] if self.owner_mode else []
+        )
 
     @staticmethod
-    def read_toml_file(file_location: str) -> MutableMapping[str, Any]:
+    def read_toml_file(file_location: str, fallback: str = None
+                       ) -> MutableMapping[str, Any]:
         with open(file_location, "r+") as fd:
             return toml.load(fd)
 
@@ -90,8 +95,8 @@ class MainClient:
 
     def get_permission(self, message: fortnitepy.FriendMessage) -> bool:
         if self.owner_mode:
-            if not message.author.display_name in self.owners:
-                if not message.author.id in self.owners:
+            if message.author.display_name not in self.owners:
+                if message.author.id not in self.owners:
                     return False
         return True
 
@@ -99,14 +104,16 @@ class MainClient:
         log.debug(f"Processing {command.__name__} as a command")
         permission = self.get_permission(message)
         if not permission:
-            log.debug(f"{message.author.display_name} doesn't have permission to run this command, skipping")
+            log.debug(
+                f"{message.author.display_name} doesn't have permission"
+                " to run this command, skipping")
             return
         return await command(MessageContext(message))
 
     async def test_commands(self, message: fortnitepy.FriendMessage) -> None:
         log.debug(f"Received message: {message.content}")
         command, *_ = message.content.split(" ")
-        if not command.startswith("!"):
+        if not command.startswith(self.command_prefix):
             return
         if command in self.commands.keys():
             await self.process_command(self.commands[command], message)
@@ -116,7 +123,8 @@ class MainClient:
                 ) -> Callable[[fortnitepy.FriendMessage], Any]:
         if not asyncio.iscoroutinefunction(coro):
             raise TypeError("Function must be a coroutine")
-        self.register_command(coro.__name__, Command(coro, self.command_prefix))
+        self.register_command(coro.__name__, Command(coro, self.command_prefix)
+                              )
 
         def inner(*args, **kwargs):
             return coro(*args, **kwargs)
@@ -142,7 +150,10 @@ class MainClient:
         self.client.add_event_handler("friend_message", self.test_commands)
         self.client.add_event_handler("party_message", self.test_commands)
         self.client.add_event_handler("ready", self.on_ready)
-        self.client.add_event_handler("party_invite", on_invite)
+        self.client.add_event_handler("party_invite", self.on_invite)
+
+    def on_invite(self, invite: fortnitepy.PartyInvitation):
+        pass
 
     def bind_to_http_client(self):
         self.http = HttpClient(self.client)
@@ -162,18 +173,11 @@ async def set_ready(message):
         fortnitepy.ReadyState(message.content)
     )
 
-@bot.command
-async def skin(message):
-    await bot.http.fin
 
 @bot.command
 async def test(message):
     print(message.content)
 
-
-async def on_invite(invite):
-    if invite.sender.display_name == "caIculator":
-        await invite.accept()
 
 def unload_colorama():
     deinit()

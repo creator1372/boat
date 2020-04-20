@@ -1,17 +1,20 @@
 from typing import Callable
-from inspect import signature, Signature
+from inspect import signature
 from enum import Enum
 from .exceptions import InvalidParameters
 from .context import MessageContext
+
 
 class Mode(Enum):
     POSITIONAL = 0
     NON_POSITIONAL = 1
 
+
 class Parameter(Enum):
     CONTEXT = 0
     POSITIONAL = 1
     NON_POSITIONAL = 2
+
 
 class Command:
     def __init__(self, fn: Callable, prefix: str):
@@ -47,7 +50,4 @@ class Command:
             ]  # Removes the invoker
         await self.function(message)
 
-# In progress
-
-
-
+# In progress # noqa
