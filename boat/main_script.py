@@ -11,7 +11,9 @@ import toml
 from colorama import deinit, init
 from colorama import Fore as Color
 
-from http_client import HttpClient
+from commands.command import Command
+from commands.context import MessageContext
+from commands.http_client import HttpClient
 
 init()
 
@@ -28,6 +30,7 @@ def date_print(*args, **kwargs):
 
 def colored_print(text: str,
                   color: Color,
+                  show_time: bool = False,
                   *args,
                   **kwargs) -> None:
 
@@ -62,6 +65,7 @@ class MainClient:
         self.owner_mode = self._account_settings["owner_mode"]
         self.owners = set(self._account_settings["owners"] if self.owner_mode == True else [])
 
+
     @staticmethod
     def read_toml_file(file_location: str) -> MutableMapping[str, Any]:
         with open(file_location, "r+") as fd:
@@ -70,17 +74,17 @@ class MainClient:
     @staticmethod
     def dump_dictionary_to_toml_file(o: Mapping[str, Any],
                                      file_location: str) -> None:
-        with open(file_location, "w") as fd:
+        with open(file_location, "w+") as fd:
             toml.dump(o, fd)
 
     @property
     def command_prefix(self):
         return self._command_prefix
 
-    def register_command(self, command_name: str, function: Callable) -> None:
+    def register_command(self, command_name: str, function: Command) -> None:
         log.debug(f"registered {self.command_prefix}{command_name} as a"
                   "command")
-        if not asyncio.iscoroutinefunction(function):
+        if not isinstance(function, Command):
             raise TypeError("Function must be a coroutine.")
         self.commands[f"{self.command_prefix}{command_name}"] = function
 
@@ -97,7 +101,7 @@ class MainClient:
         if not permission:
             log.debug(f"{message.author.display_name} doesn't have permission to run this command, skipping")
             return
-        return await command(message)
+        return await command(MessageContext(message))
 
     async def test_commands(self, message: fortnitepy.FriendMessage) -> None:
         log.debug(f"Received message: {message.content}")
@@ -110,7 +114,9 @@ class MainClient:
     def command(self,
                 coro: Callable
                 ) -> Callable[[fortnitepy.FriendMessage], Any]:
-        self.register_command(coro.__name__, coro)
+        if not asyncio.iscoroutinefunction(coro):
+            raise TypeError("Function must be a coroutine")
+        self.register_command(coro.__name__, Command(coro, self.command_prefix))
 
         def inner(*args, **kwargs):
             return coro(*args, **kwargs)
@@ -121,7 +127,7 @@ class MainClient:
         return input("Exchange code? ")
 
     async def on_ready(self):
-        print(f"ready as {self.client.user.display_name}")
+        colored_print(f"ready as {self.client.user.display_name}", Color.GREEN)
 
     def start(self):
         self.client = fortnitepy.Client(
@@ -134,6 +140,7 @@ class MainClient:
             )
         )
         self.client.add_event_handler("friend_message", self.test_commands)
+        self.client.add_event_handler("party_message", self.test_commands)
         self.client.add_event_handler("ready", self.on_ready)
         self.client.add_event_handler("party_invite", on_invite)
 
@@ -150,9 +157,9 @@ async def playlist(message):
 
 
 @bot.command
-async def set_ready(message, lol):
+async def set_ready(message):
     await bot.client.user.party.me.set_ready(
-        fortnitepy.ReadyState.SITTING_OUT
+        fortnitepy.ReadyState(message.content)
     )
 
 @bot.command
@@ -161,8 +168,7 @@ async def skin(message):
 
 @bot.command
 async def test(message):
-    from pprint import pprint
-    pprint(dir(message))
+    print(message.content)
 
 
 async def on_invite(invite):
@@ -174,7 +180,7 @@ def unload_colorama():
 
 
 colored_print(r"""
-__
+__                 _
 | |__   ___   __ _| |_
 | '_ \ / _ \ / _` | __|
 | |_) | (_) | (_| | |_
