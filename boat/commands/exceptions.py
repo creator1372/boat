@@ -7,3 +7,4 @@ class ExtensionException(Exception):
 
 class InvalidParameters(ExtensionException):
     pass
+
