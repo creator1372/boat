@@ -6,5 +6,14 @@ class ExtensionException(Exception):
 
 
 class InvalidParameters(ExtensionException):
+    """
+    Invalid parameters passed
+    """
     pass
 
+
+class NoPermissionError(ExtensionException):
+    """
+    The user has no permission to run this code
+    """
+    pass

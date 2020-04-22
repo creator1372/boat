@@ -2,18 +2,19 @@
 
 import asyncio
 import datetime
+import functools
 import logging
-from typing import Any, Callable, Dict, MutableMapping, Mapping
+from commands.command import Command
+from commands.context import MessageContext
+from commands.http_client import HttpClient
+from commands.exceptions import NoPermissionError
+from typing import Any, Callable, Dict, Mapping, MutableMapping
 
 import colorama
 import fortnitepy
 import toml
-from colorama import deinit, init
 from colorama import Fore as Color
-
-from commands.command import Command
-from commands.context import MessageContext
-from commands.http_client import HttpClient
+from colorama import deinit, init
 
 init()
 
@@ -157,6 +158,15 @@ class MainClient:
 
     def bind_to_http_client(self):
         self.http = HttpClient(self.client)
+
+    @functools.wraps
+    def owner_only(self, function: Command):
+        def inner(message: MessageContext, *args, **kwargs):
+            if not self.get_permission(message):
+                raise NoPermissionError("No permission to run command")
+            else:
+                return function(*args, **kwargs)
+        return inner(function)
 
 
 bot = MainClient(command_prefix="!")

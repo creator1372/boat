@@ -12,7 +12,14 @@ class MessageContext(fortnitepy.message.MessageBase):
     def __init__(self,
                  message: Union[fortnitepy.PartyMessage, fortnitepy.FriendMessage] # noqa
                  ):
-        super().__init__(message.client, message.author, message.content)
+        super().__init__(
+            message.client, message.author, message.content, message
+        )
+        self._message = message
+        try:
+            self.party = self._message.party
+        except NameError:
+            self.party = None
         if isinstance(message, fortnitepy.FriendMessage):
             self.type = MessageType.FRIEND
         else:
